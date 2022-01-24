@@ -1,0 +1,8 @@
+.DS_Store
+/lastupdate.tmp
+/prototype
+/prototype.tar.gz
+
+# Editor directories and files
+.idea
+.vscode
