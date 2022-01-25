@@ -7,7 +7,7 @@ import (
 )
 
 type Prototype struct {
-	Id          uint32    `orm:"pk;auto" json:"id" form:"-"`
+	Id          uint      `orm:"pk;auto" json:"id" form:"-"`
 	Name        string    `orm:"size(32)" json:"name" form:"name" valid:"Required;MaxSize(32)"`
 	ProjectName string    `orm:"size(32);index" json:"projectName" form:"projectName" valid:"Required;MaxSize(32)"`
 	Path        string    `orm:"size(255)" json:"path" form:"path" valid:"Required;MaxSize(255)"`

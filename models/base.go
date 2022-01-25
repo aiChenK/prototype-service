@@ -38,10 +38,7 @@ func Init() error {
 		dbConfig["charset"],
 	)
 
-	runMode, _ := beego.AppConfig.String("RunMode")
-	isDev := runMode == "dev"
-
-	if isDev {
+	if beego.BConfig.RunMode == "dev" {
 		orm.Debug = true
 	}
 
