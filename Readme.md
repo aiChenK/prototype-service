@@ -17,3 +17,13 @@ bee pack -be GOOS=windows -be GOARCH=amd64 -a prototype
 # create tmp folder
 mkdir static/tmp
 ```
+
+## swagger
+```bash
+# 下载swagger
+bee run -downdoc=true
+
+# 生成文档
+# go install github.com/swaggo/swag/cmd/swag@latest
+swag init -o ./swagger
+```

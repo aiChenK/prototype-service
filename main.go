@@ -10,6 +10,16 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+// @title          原型管理api
+// @version        1.0
+// @contact.name   aiChenK
+// @contact.email  aichenk@qq.com
+
+// @tag.name login
+// @tag.description 登录
+// @tag.name prototype
+// @tag.description 原型管理
+
 func main() {
 
 	//开启session
@@ -31,10 +41,8 @@ func main() {
 
 	models.Init()
 
-	runMode, _ := beego.AppConfig.String("RunMode")
-	isDev := runMode == "dev"
-
-	if isDev {
+	if beego.BConfig.RunMode == "dev" {
+		beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"
 		beego.Run("127.0.0.1")
 	} else {
 		beego.Run()

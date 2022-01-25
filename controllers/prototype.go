@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"os"
+	"prototype/dto"
 	"prototype/helper"
 	"prototype/models"
 	"time"
@@ -15,19 +16,24 @@ type PrototypeController struct {
 	BaseController
 }
 
-// @description 原型列表
+// @summary 获取原型列表
+// @tags prototype
+// @param status query int false "状态，1=正常（默认），2=已删除" enums(1, 2) default(1)
+// @param page query int false "页码" default(1)
+// @param size query int false "每页数量" default(10)
+// @param projectName query string false "产品名(精确）" minLength(30)
+// @success 200 {object} helper.Pager{data=[]dto.PrototypeResponse}
 // @router /api/prototype [get]
 func (c *PrototypeController) List() {
 	status, _ := c.GetInt("status", 1)
 	projectName := c.GetString("projectName")
 	page, _ := c.GetInt("page", 1)
-	size, _ := c.GetInt("size", 20)
+	size, _ := c.GetInt("size", 10)
 	offset := (page - 1) * size
 
 	o := orm.NewOrm()
 	qs := o.QueryTable(&models.Prototype{})
 
-	rows := []orm.Params{}
 	switch status {
 	case 1:
 		qs = qs.Filter("IsDel", 0)
@@ -40,44 +46,30 @@ func (c *PrototypeController) List() {
 	}
 
 	total, _ := qs.Count()
+
+	fields := []string{"Id", "Name", "ProjectName", "Path", "CreateTime", "UpdateTime", "StartDate", "EndDate"}
+	rows := []orm.Params{}
 	qs.
 		OrderBy("-Id").
 		Limit(size, offset).
-		Values(&rows, "Id", "Name", "ProjectName", "Path", "CreateTime", "UpdateTime", "StartDate", "EndDate")
+		Values(&rows, fields...)
 
-	//数据格式化
-	nowTime := time.Now().Unix()
+	// 数据格式化
+	data := []dto.PrototypeResponse{}
 	for _, row := range rows {
-		if value, ok := row["CreateTime"].(time.Time); ok {
-			row["CreateTime"] = value.Format("2006-01-02 15:04:05")
-		} else {
-			row["CreateTime"] = ""
-		}
-		if value, ok := row["UpdateTime"].(time.Time); ok {
-			row["UpdateTime"] = value.Format("2006-01-02 15:04:05")
-		} else {
-			row["UpdateTime"] = ""
-		}
-		if value, ok := row["StartDate"].(time.Time); ok {
-			row["StartDate"] = value.Format("2006-01-02")
-		} else {
-			row["StartDate"] = ""
-		}
-		if value, ok := row["EndDate"].(time.Time); ok {
-			row["IsExprie"] = value.Unix() < nowTime
-			row["EndDate"] = value.Format("2006-01-02")
-		} else {
-			row["IsExprie"] = false
-			row["EndDate"] = ""
-		}
+		prototype := &dto.PrototypeResponse{}
+		data = append(data, *prototype.Parse(row))
 	}
 
 	pager := &helper.Pager{}
-
-	c.sendJson(pager.RunPage(page, size, int(total), rows))
+	c.sendJson(pager.RunPage(page, size, int(total), data))
 }
 
-// @description 文件上传
+// @summary 文件上传
+// @tags prototype
+// @accept mpfd
+// @param file formData file true "zip压缩包"
+// @success 200 {object} dto.FileResponse
 // @router /api/prototype/file [post]
 func (c *PrototypeController) File() {
 	nowTime := fmt.Sprintf("%d", time.Now().UnixMicro())
@@ -102,7 +94,10 @@ func (c *PrototypeController) File() {
 	c.sendJson(map[string]interface{}{"path": savePath})
 }
 
-// @description 保存原型
+// @summary 创建
+// @tags prototype
+// @param body body dto.PrototypeCreate true "原型"
+// @success 200 {object} dto.SuccessResponse
 // @router /api/prototype [post]
 func (c *PrototypeController) Create() {
 	//参数解析
@@ -141,6 +136,8 @@ func (c *PrototypeController) Create() {
 }
 
 // @description 获取产品枚举
+// @tags prototype
+// @success 200 {array} string
 // @router /api/prototype/project [get]
 func (c *PrototypeController) Project() {
 	var projects orm.ParamsList
@@ -167,27 +164,27 @@ func (c *PrototypeController) Project() {
 }
 
 // func (c *PrototypeController) DeleteView() {
-// 	idParam := c.Ctx.Input.Param(":id")
-// 	idInt, err := strconv.ParseInt(idParam, 10, 32)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	id := uint32(idInt)
+// idParam := c.Ctx.Input.Param(":id")
+// idInt, err := strconv.ParseInt(idParam, 10, 32)
+// if err != nil {
+// 	panic(err)
+// }
+// id := uint32(idInt)
 
-// 	o := orm.NewOrm()
-// 	prototypeModel := models.Prototype{Id: id}
-// 	err = o.Read(&prototypeModel)
-// 	if err != nil {
-// 		panic(err)
-// 	}
+// o := orm.NewOrm()
+// prototypeModel := models.Prototype{Id: id}
+// err = o.Read(&prototypeModel)
+// if err != nil {
+// 	panic(err)
+// }
 
-// 	prototypeModel.IsDel = 1
-// 	_, err = o.Update(&prototypeModel, "IsDel", "UpdateTime")
-// 	if err != nil {
-// 		panic(err)
-// 	}
+// prototypeModel.IsDel = 1
+// _, err = o.Update(&prototypeModel, "IsDel", "UpdateTime")
+// if err != nil {
+// 	panic(err)
+// }
 
-// 	c.Redirect("/prototype", 302)
+// c.Redirect("/prototype", 302)
 // }
 
 // func (c *PrototypeController) Upload() {

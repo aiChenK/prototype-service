@@ -1,7 +1,8 @@
 .DS_Store
 /lastupdate.tmp
-/prototype
+/prototype-service
 /prototype.tar.gz
+/swagger
 
 # Editor directories and files
 .idea
