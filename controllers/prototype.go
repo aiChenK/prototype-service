@@ -6,6 +6,8 @@ import (
 	"prototype/dto"
 	"prototype/helper"
 	"prototype/models"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/beego/beego/v2/client/orm"
@@ -14,6 +16,14 @@ import (
 
 type PrototypeController struct {
 	BaseController
+}
+
+func (c *PrototypeController) Prepare() {
+	_, action := c.GetControllerAndAction()
+	if helper.InArray(action, []string{"File", "Create", "Delete"}) && !c.checkLogin() {
+		c.sendError("未登录不可操作", 401)
+	}
+	c.BaseController.Prepare()
 }
 
 // @summary 获取原型列表
@@ -142,7 +152,7 @@ func (c *PrototypeController) Create() {
 func (c *PrototypeController) Project() {
 	var projects orm.ParamsList
 	orm.NewOrm().
-		Raw("select project_name from (select project_name from prototype order by update_time desc) a GROUP BY project_name").
+		Raw("select project_name from (select project_name from prototype where is_del = 0 order by update_time desc) a GROUP BY project_name").
 		ValuesFlat(&projects)
 	c.sendJson(projects)
 
@@ -163,79 +173,46 @@ func (c *PrototypeController) Project() {
 	// c.sendJson(projects)
 }
 
-// func (c *PrototypeController) DeleteView() {
-// idParam := c.Ctx.Input.Param(":id")
-// idInt, err := strconv.ParseInt(idParam, 10, 32)
-// if err != nil {
-// 	panic(err)
-// }
-// id := uint32(idInt)
+// @description 删除原型
+// @tags prototype
+// @param body body []int true "ids"
+// @success 200 {object} dto.SuccessResponse
+// @router /api/prototype [delete]
+func (c *PrototypeController) Delete() {
+	//处理数组
+	idParam := strings.Split(c.GetString("ids"), ",")
+	ids := []int{}
+	for _, id := range idParam {
+		if id == "" {
+			continue
+		}
+		tmp, _ := strconv.Atoi(id)
+		if tmp <= 0 {
+			continue
+		}
+		ids = append(ids, tmp)
+	}
+	if len(ids) == 0 {
+		c.sendError("缺少有效id", 400)
+	}
 
-// o := orm.NewOrm()
-// prototypeModel := models.Prototype{Id: id}
-// err = o.Read(&prototypeModel)
-// if err != nil {
-// 	panic(err)
-// }
+	prototypeModel := &models.Prototype{}
+	prototypeModel.DeleteByIds(ids)
 
-// prototypeModel.IsDel = 1
-// _, err = o.Update(&prototypeModel, "IsDel", "UpdateTime")
-// if err != nil {
-// 	panic(err)
-// }
+	//文件删除
+	o := orm.NewOrm()
+	rows := []orm.Params{}
+	o.QueryTable(&models.Prototype{}).
+		Filter("id__in", ids).
+		Values(&rows, "Id", "Path")
+	for _, row := range rows {
+		path := row["Path"].(string)
+		fmt.Println(path)
+		if strings.HasPrefix(path, "http") {
+			continue
+		}
+		os.RemoveAll(path)
+	}
 
-// c.Redirect("/prototype", 302)
-// }
-
-// func (c *PrototypeController) Upload() {
-
-// 	//参数解析
-// 	prototypeModel := models.Prototype{}
-// 	if err := c.ParseForm(&prototypeModel); err != nil {
-// 		c.sendError("表达解析失败"+err.Error(), 400)
-// 	}
-
-// 	//参数验证
-// 	valid := validation.Validation{}
-// 	isValid, err := valid.Valid(&prototypeModel)
-// 	if err != nil {
-// 		c.sendError("验证有误"+err.Error(), 400)
-// 	}
-// 	if !isValid {
-// 		for _, err := range valid.Errors {
-// 			c.sendError("参数有误："+err.Error(), 400)
-// 		}
-// 	}
-
-// 	//文件处理
-// 	nowTime := fmt.Sprintf("%d", time.Now().UnixMicro())
-// 	file, fileHead, err := c.GetFile("file")
-// 	if err != nil {
-// 		c.sendError("文件上传失败："+err.Error(), 400)
-// 	}
-// 	defer file.Close()
-// 	tempPath := "static/tmp/" + nowTime
-// 	c.SaveToFile("file", tempPath)
-
-// 	prototypeModel.Path = "static/files/" + nowTime
-
-// 	//解压到指定目录并删除缓存
-// 	err = helper.UnZipWithReplacePath(tempPath, prototypeModel.Path, helper.GetFileBaseNameOnly(fileHead.Filename))
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	os.Remove(tempPath)
-
-// 	//保存
-// 	o := orm.NewOrm()
-// 	_, err = o.Insert(&prototypeModel)
-// 	if err != nil {
-// 		c.sendError("保存失败"+err.Error(), 500)
-// 	}
-// 	// c.sendSuccess("保存成功")
-
-// 	flash := web.NewFlash()
-// 	flash.Success("上传成功")
-// 	flash.Store(&c.Controller)
-// 	c.Redirect("/prototype", 302)
-// }
+	c.sendSuccess("删除成功")
+}
