@@ -21,3 +21,13 @@ type Prototype struct {
 func init() {
 	orm.RegisterModel(new(Prototype))
 }
+
+func (m *Prototype) DeleteByIds(ids []int) (num int64, err error) {
+	o := orm.NewOrm()
+	return o.QueryTable(&Prototype{}).
+		Filter("id__in", ids).
+		Update(orm.Params{
+			"is_del":      1,
+			"update_time": time.Now().UTC(),
+		})
+}

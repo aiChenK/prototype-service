@@ -6,11 +6,14 @@ import (
 	"prototype/models"
 	_ "prototype/routers"
 
+	// _ "prototype/tasks"
+
 	beego "github.com/beego/beego/v2/server/web"
 	_ "github.com/go-sql-driver/mysql"
 )
 
 // @title          原型管理api
+// @description    学海内部适用
 // @version        1.0
 // @contact.name   aiChenK
 // @contact.email  aichenk@qq.com
@@ -40,6 +43,9 @@ func main() {
 	})
 
 	models.Init()
+
+	// toolbox.StartTask()
+	// defer toolbox.StopTask()
 
 	if beego.BConfig.RunMode == "dev" {
 		beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"

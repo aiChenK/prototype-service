@@ -54,6 +54,15 @@ func init() {
 
     beego.GlobalControllerRouter["prototype/controllers:PrototypeController"] = append(beego.GlobalControllerRouter["prototype/controllers:PrototypeController"],
         beego.ControllerComments{
+            Method: "Delete",
+            Router: "/api/prototype",
+            AllowHTTPMethods: []string{"delete"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["prototype/controllers:PrototypeController"] = append(beego.GlobalControllerRouter["prototype/controllers:PrototypeController"],
+        beego.ControllerComments{
             Method: "File",
             Router: "/api/prototype/file",
             AllowHTTPMethods: []string{"post"},

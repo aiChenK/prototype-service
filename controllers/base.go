@@ -14,6 +14,14 @@ type BaseController struct {
 func (c *BaseController) Prepare() {
 }
 
+func (c *BaseController) checkLogin() bool {
+	auth := c.GetSession("auth")
+	if isLogin, ok := auth.(bool); ok {
+		return isLogin
+	}
+	return false
+}
+
 // @title 返回错误消息
 func (c *BaseController) sendError(msg string, code int) {
 	if code >= 400 && code < 600 {
