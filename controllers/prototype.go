@@ -20,7 +20,7 @@ type PrototypeController struct {
 
 func (c *PrototypeController) Prepare() {
 	_, action := c.GetControllerAndAction()
-	if helper.InArray(action, []string{"File", "Create", "Delete"}) && !c.checkLogin() {
+	if helper.InArray(action, []string{"File", "Create", "Edit", "Delete"}) && !c.checkLogin() {
 		c.sendError("未登录不可操作", 401)
 	}
 	c.BaseController.Prepare()
@@ -145,7 +145,52 @@ func (c *PrototypeController) Create() {
 	c.sendSuccess("操作成功")
 }
 
-// @description 获取产品枚举
+// @summary 修改
+// @tags prototype
+// @param id path int true "原型id"
+// @param body body dto.PrototypeCreate true "原型"
+// @success 200 {object} dto.SuccessResponse
+// @router /api/prototype/:id [patch]
+func (c *PrototypeController) Edit() {
+	//参数解析
+	idParam := c.Ctx.Input.Param(":id")
+	id, _ := strconv.Atoi(idParam)
+	body := c.getJson()
+
+	prototypeModel := models.Prototype{}
+	prototypeModel.Id = uint(id)
+	prototypeModel.Name = body["name"].(string)
+	prototypeModel.ProjectName = body["projectName"].(string)
+	prototypeModel.Path = body["path"].(string)
+	if body["startDate"] != "" && body["startDate"] != nil {
+		prototypeModel.StartDate, _ = time.Parse("2006-01-02", body["startDate"].(string))
+	}
+	if body["endDate"] != "" && body["endDate"] != nil {
+		prototypeModel.EndDate, _ = time.Parse("2006-01-02", body["endDate"].(string))
+	}
+
+	//参数验证
+	valid := validation.Validation{}
+	isValid, err := valid.Valid(&prototypeModel)
+	if err != nil {
+		c.sendError("验证有误："+err.Error(), 400)
+	}
+	if !isValid {
+		for _, err := range valid.Errors {
+			c.sendError("参数有误："+err.Error(), 400)
+		}
+	}
+
+	//保存
+	o := orm.NewOrm()
+	_, err = o.Update(&prototypeModel)
+	if err != nil {
+		c.sendError("保存失败："+err.Error(), 500)
+	}
+	c.sendSuccess("操作成功")
+}
+
+// @summary 获取产品枚举
 // @tags prototype
 // @success 200 {array} string
 // @router /api/prototype/project [get]
@@ -173,7 +218,7 @@ func (c *PrototypeController) Project() {
 	// c.sendJson(projects)
 }
 
-// @description 删除原型
+// @summary 删除原型
 // @tags prototype
 // @param body body []int true "ids"
 // @success 200 {object} dto.SuccessResponse
