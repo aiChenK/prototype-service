@@ -157,8 +157,18 @@ func (c *PrototypeController) Edit() {
 	id, _ := strconv.Atoi(idParam)
 	body := c.getJson()
 
+	o := orm.NewOrm()
+
 	prototypeModel := models.Prototype{}
 	prototypeModel.Id = uint(id)
+
+	//路径变更且非外链则删除
+	o.Read(&prototypeModel)
+	if prototypeModel.Path != body["path"].(string) && !strings.HasPrefix(prototypeModel.Path, "http") {
+		os.RemoveAll(prototypeModel.Path)
+	}
+
+	//填充数据
 	prototypeModel.Name = body["name"].(string)
 	prototypeModel.ProjectName = body["projectName"].(string)
 	prototypeModel.Path = body["path"].(string)
@@ -182,7 +192,6 @@ func (c *PrototypeController) Edit() {
 	}
 
 	//保存
-	o := orm.NewOrm()
 	_, err = o.Update(&prototypeModel)
 	if err != nil {
 		c.sendError("保存失败："+err.Error(), 500)
@@ -252,7 +261,6 @@ func (c *PrototypeController) Delete() {
 		Values(&rows, "Id", "Path")
 	for _, row := range rows {
 		path := row["Path"].(string)
-		fmt.Println(path)
 		if strings.HasPrefix(path, "http") {
 			continue
 		}
