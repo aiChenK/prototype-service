@@ -3,6 +3,10 @@
 /prototype-service
 /prototype.tar.gz
 /swagger
+/conf/app.prod.conf
+/conf/app.dev.conf
+/Makefile
+/restart.sh
 
 # Editor directories and files
 .idea
