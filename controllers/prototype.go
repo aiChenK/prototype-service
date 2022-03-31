@@ -39,6 +39,8 @@ func (c *PrototypeController) List() {
 	projectName := c.GetString("projectName")
 	page, _ := c.GetInt("page", 1)
 	size, _ := c.GetInt("size", 10)
+	team, _ := c.GetInt("team", 0)
+	tag, _ := c.GetInt("tag", 0)
 	offset := (page - 1) * size
 
 	o := orm.NewOrm()
@@ -54,6 +56,12 @@ func (c *PrototypeController) List() {
 	if projectName != "" {
 		qs = qs.Filter("ProjectName", projectName)
 	}
+	if team != 0 {
+		qs = qs.FilterRaw("id", "IN (select prototype_id from tag_bind where is_del = 0 and tag_id = "+strconv.Itoa(team)+")")
+	}
+	if tag != 0 {
+		qs = qs.FilterRaw("id", "IN (select prototype_id from tag_bind where is_del = 0 and tag_id = "+strconv.Itoa(tag)+")")
+	}
 
 	total, _ := qs.Count()
 
@@ -65,10 +73,38 @@ func (c *PrototypeController) List() {
 		Values(&rows, fields...)
 
 	// 数据格式化
-	data := []dto.PrototypeResponse{}
+	data := []*dto.PrototypeResponse{}
+	pIds := []uint{}
 	for _, row := range rows {
 		prototype := &dto.PrototypeResponse{}
-		data = append(data, *prototype.Parse(row))
+		data = append(data, prototype.Parse(row))
+		pIds = append(pIds, uint(prototype.Id))
+	}
+
+	//获取标签
+	if len(pIds) > 0 {
+		pIdStr := strings.Replace(strings.Trim(fmt.Sprint(pIds), "[]"), " ", ",", -1)
+		var maps []struct {
+			PrototypeId uint
+			Type        uint8
+			Id          uint
+			Name        string
+		}
+		orm.NewOrm().
+			Raw("select b.prototype_id,t.type,t.id,t.name from tag_bind as b left join tag t on t.id = b.tag_id where b.is_del = 0 and t.is_del = 0 and b.prototype_id in (" + pIdStr + ")").
+			QueryRows(&maps)
+		for _, row := range data {
+			for _, tag := range maps {
+				if tag.PrototypeId != row.Id {
+					continue
+				}
+				if tag.Type == 1 {
+					row.Team = append(row.Team, dto.TagResponse{Id: tag.Id, Name: tag.Name})
+				} else {
+					row.Tag = append(row.Tag, dto.TagResponse{Id: tag.Id, Name: tag.Name})
+				}
+			}
+		}
 	}
 
 	pager := &helper.Pager{}
@@ -136,12 +172,33 @@ func (c *PrototypeController) Create() {
 		}
 	}
 
-	//保存
+	//事务处理
 	o := orm.NewOrm()
-	_, err = o.Insert(&prototypeModel)
+	// o.Begin()
+	txOrm, err := o.Begin()
+	if err != nil {
+		c.sendError("事务开启失败："+err.Error(), 500)
+	}
+
+	//保存
+	_, err = txOrm.Insert(&prototypeModel)
 	if err != nil {
 		c.sendError("保存失败："+err.Error(), 500)
 	}
+
+	//获取team tagid
+	teamIds, _ := models.DealNewTags(txOrm, body["team"].([]interface{}), 1)
+	tagIds, _ := models.DealNewTags(txOrm, body["tag"].([]interface{}), 2)
+
+	//保存tag关联信息
+	_, err = models.SavePrototypeTag(txOrm, prototypeModel.Id, append(teamIds, tagIds...))
+
+	if err != nil {
+		txOrm.Rollback()
+	} else {
+		txOrm.Commit()
+	}
+
 	c.sendSuccess("操作成功")
 }
 
@@ -227,6 +284,30 @@ func (c *PrototypeController) Project() {
 	// c.sendJson(projects)
 }
 
+// @summary 获取团队枚举
+// @tags prototype
+// @success 200 {array} []dto.TagResponse
+// @router /api/prototype/team [get]
+func (c *PrototypeController) Team() {
+	var maps []dto.TagResponse
+	orm.NewOrm().
+		Raw("select id, name from tag where is_del = 0 and type = 1 limit 100").
+		QueryRows(&maps)
+	c.sendJson(maps)
+}
+
+// @summary 获取标签枚举
+// @tags prototype
+// @success 200 {array} []dto.TagResponse
+// @router /api/prototype/tag [get]
+func (c *PrototypeController) Tag() {
+	var maps []dto.TagResponse
+	orm.NewOrm().
+		Raw("select id, name from tag where is_del = 0 and type = 2 limit 100").
+		QueryRows(&maps)
+	c.sendJson(maps)
+}
+
 // @summary 删除原型
 // @tags prototype
 // @param body body []int true "ids"
@@ -252,6 +333,10 @@ func (c *PrototypeController) Delete() {
 
 	prototypeModel := &models.Prototype{}
 	prototypeModel.DeleteByIds(ids)
+
+	//删除关联
+	tagBindModel := &models.TagBind{}
+	tagBindModel.DeleteByPrototypeIds(ids)
 
 	//文件删除
 	o := orm.NewOrm()

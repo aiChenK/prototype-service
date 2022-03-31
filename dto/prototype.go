@@ -7,15 +7,17 @@ import (
 )
 
 type PrototypeResponse struct {
-	Id          uint   `json:"id"`
-	Name        string `json:"name"`
-	ProjectName string `json:"projectName"`
-	Path        string `json:"path"`
-	IsDel       uint8  `json:"-"`
-	StartDate   string `json:"startDate"`
-	EndDate     string `json:"endDate"`
-	CreateTime  string `json:"createTime"`
-	UpdateTime  string `json:"updateTime"`
+	Id          uint          `json:"id"`
+	Name        string        `json:"name"`
+	ProjectName string        `json:"projectName"`
+	Team        []TagResponse `json:"team"`
+	Tag         []TagResponse `json:"tag"`
+	Path        string        `json:"path"`
+	IsDel       uint8         `json:"-"`
+	StartDate   string        `json:"startDate"`
+	EndDate     string        `json:"endDate"`
+	CreateTime  string        `json:"createTime"`
+	UpdateTime  string        `json:"updateTime"`
 }
 
 func (r *PrototypeResponse) Parse(row orm.Params) *PrototypeResponse {
@@ -35,6 +37,8 @@ func (r *PrototypeResponse) Parse(row orm.Params) *PrototypeResponse {
 	if value, ok := row["EndDate"].(time.Time); ok {
 		r.EndDate = value.Format("2006-01-02")
 	}
+	r.Team = make([]TagResponse, 0)
+	r.Tag = make([]TagResponse, 0)
 	return r
 }
 
