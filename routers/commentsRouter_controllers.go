@@ -45,6 +45,15 @@ func init() {
 
     beego.GlobalControllerRouter["prototype/controllers:PrototypeController"] = append(beego.GlobalControllerRouter["prototype/controllers:PrototypeController"],
         beego.ControllerComments{
+            Method: "Delete",
+            Router: "/api/prototype",
+            AllowHTTPMethods: []string{"delete"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["prototype/controllers:PrototypeController"] = append(beego.GlobalControllerRouter["prototype/controllers:PrototypeController"],
+        beego.ControllerComments{
             Method: "Create",
             Router: "/api/prototype",
             AllowHTTPMethods: []string{"post"},
@@ -54,9 +63,9 @@ func init() {
 
     beego.GlobalControllerRouter["prototype/controllers:PrototypeController"] = append(beego.GlobalControllerRouter["prototype/controllers:PrototypeController"],
         beego.ControllerComments{
-            Method: "Delete",
-            Router: "/api/prototype",
-            AllowHTTPMethods: []string{"delete"},
+            Method: "Edit",
+            Router: "/api/prototype/:id",
+            AllowHTTPMethods: []string{"patch"},
             MethodParams: param.Make(),
             Filters: nil,
             Params: nil})
@@ -83,6 +92,24 @@ func init() {
         beego.ControllerComments{
             Method: "Project",
             Router: "/api/prototype/project",
+            AllowHTTPMethods: []string{"get"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["prototype/controllers:PrototypeController"] = append(beego.GlobalControllerRouter["prototype/controllers:PrototypeController"],
+        beego.ControllerComments{
+            Method: "Tag",
+            Router: "/api/prototype/tag",
+            AllowHTTPMethods: []string{"get"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["prototype/controllers:PrototypeController"] = append(beego.GlobalControllerRouter["prototype/controllers:PrototypeController"],
+        beego.ControllerComments{
+            Method: "Team",
+            Router: "/api/prototype/team",
             AllowHTTPMethods: []string{"get"},
             MethodParams: param.Make(),
             Filters: nil,
